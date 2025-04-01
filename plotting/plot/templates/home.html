@@ -1,0 +1,248 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Dashboard </title>
+
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.3.3/dist/echarts.min.js"></script>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
+
+    <style>
+        * {box-sizing: border-box}
+
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: Arial;
+        }
+
+        .tablink {
+            background-color: #e7d0ec;
+            color: black;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            font-size: 17px;
+            width: 50%;
+        }
+
+        .chart_data {
+            margin-bottom: 40px;
+        }
+
+        .chart {
+            height: 450px;
+            width: 100%;
+            background-color: rgb(239, 249, 234);
+        }
+
+        #table_container {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>All charts</h1>
+
+<div class="container_chart">
+
+    {% for plot_key, plot_value in content.plot_data.items %}
+
+    <div class="chart_data">
+
+        <h2>{{ plot_value.plot_title }}</h2>
+
+        <div class="form-group">
+            <br><select name="plot_select" id="plot_type_{{ forloop.counter0 }}" onchange="update_plot_type({{ forloop.counter0 }})" class="tablink" onclick="toggle_chart_table({{ forloop.counter0 }})">
+                <option value="line" selected>  line  </option>
+                <option value="bar"          >  bar   </option>
+                <option value="pie"          >  pie   </option>
+                <option value="scatter"      > scatter</option>
+            </select>
+        </div>
+
+        <button type="button" id="loadTable{{ forloop.counter0 }}" class="tablink" onclick="toggle_chart_table({{ forloop.counter0 }})">Table</button><br><br> <!-- table button -->
+
+        <div class="chart" id="chart{{ forloop.counter0 }}" style="display: block;"></div>              <!-- chart canvas -->
+
+        <div id="table_container{{ forloop.counter0 }}" style="display: none;"></div>                   <!-- table div -->
+
+    </div>
+
+    <script>
+
+
+        function toggle_chart_table(index) {
+
+            var chartDiv = document.getElementById('chart' + index);
+            var tableDiv = document.getElementById('table_container' + index);
+
+            chartDiv.style.display = 'none';
+            tableDiv.style.display = 'none';
+
+            if (event.target.id === 'loadTable' + index) {
+
+                tableDiv.style.display = 'block';
+            } else {
+
+                chartDiv.style.display = 'block';
+            }
+        }
+
+
+
+
+        $(document).ready(function() {
+            $("#loadTable{{ forloop.counter0 }}").click(function(e) {
+                e.preventDefault(); 
+
+                $.ajax({
+                    type: "GET",  
+                    url: "/plot_table{{ forloop.counter0 }}/",
+                    success: function(response) {
+                          
+                    if(response.status === "ok" && response.data.length > 0) {
+
+                        var tableHtml = "<table><thead><tr>";
+                        var columns = Object.keys(response.data[0]);
+                        columns.forEach(function(column) {
+                            tableHtml += "<th>" + column + "</th>";
+                            });
+                        tableHtml += "</tr></thead><tbody>";
+    
+                        response.data.forEach(function(row) {
+                                tableHtml += "<tr>";
+                                columns.forEach(function(column) {
+                                    tableHtml += "<td>" + row[column] + "</td>";
+                                });
+                                tableHtml += "</tr>";
+                                });
+    
+                            tableHtml += "</tbody></table>";
+                            $("#table_container{{forloop.counter0}}").html(tableHtml);
+                            } else {
+
+                                $("#table_container{{forloop.counter0}}").html("<p> No data available. </p>");
+                            }
+                        },
+                        error: function() {
+
+                            alert(" request failed. Please try again later.");
+                        }
+                    });
+                });
+            });
+
+
+
+        window.onload = function () {
+            {% for plot_key, plot_value in content.plot_data.items %}
+                update_plot_type({{ forloop.counter0 }});
+            {% endfor %}
+        }
+
+
+
+        function update_plot_type(plot_index) {
+            {% for plot_key, plot_value in content.plot_data.items %}
+            if ({{ forloop.counter0}} === plot_index) {
+                (function () {
+                    var select_plot_type = document.getElementById('plot_type_' + plot_index).value;
+                    var chart_container_id = 'chart' + plot_index;
+                    var chartDom = document.getElementById(chart_container_id);
+                    var plots = echarts.init(chartDom);
+
+                    var plot_title = "{{ plot_value.plot_title }}";
+                    var x_name = "{{ plot_value.x_name }}";
+                    var y_name = "{{ plot_value.y_name }}";
+                    var x_data = {{ plot_value.x_data|safe }};
+                    var y_data = {{ plot_value.y_data|safe }};
+
+                    var option = {
+                        title: {
+                            text: plot_title,
+                        },
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: { type: 'cross' }
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: x_data,
+                            name: x_name
+                        },
+                        yAxis: {
+                            type: 'value',
+                            name: y_name
+                        },
+                        legend: {
+                            top: '0%',
+                            right: '0%',
+                            orient: 'vertical',
+                            textStyle: {
+                                fontSize: 8,
+                            },
+                        },
+                        series: [{
+                            data: y_data,
+                            type: select_plot_type,
+                            name: 'scale'
+                        }]
+                    };
+
+                    if (select_plot_type === 'pie') {
+                        option.series[0].type = 'pie';
+                        option.series[0].radius = '55%';
+                        option.series[0].data = x_data.map(function (item, index) {
+                            return { value: y_data[index], name: item };
+                        });
+                        option.tooltip.trigger = 'item';
+                        option.tooltip.formatter = '{b}: {c} ({d}%)';
+                        option.series[0].label = {
+                            show: true,
+                            formatter: '{b}: {d}%'
+                        };
+                    }
+
+                    plots.setOption(option);
+                })();
+            }
+            {% endfor %}
+        }
+
+
+    </script>
+
+    {% endfor %}
+
+</div>
+
+<h1>All data in table</h1>
+
+<div class="container_table">
+
+    {% for table_title, table_data in content.chart_data.items %}
+
+    <div class="table_data">
+
+        <h2>{{ table_data.title }} table</h2>
+        <h3>{{ table_data.data|safe }}</h3>
+
+    </div>
+
+    {% endfor %}
+
+</div>
+
+</body>
+</html>
