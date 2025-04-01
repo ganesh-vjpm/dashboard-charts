@@ -13,41 +13,6 @@
 
     <link rel="stylesheet" href="{% static 'css/home.css' %}">
 
-    <style>
-        * {box-sizing: border-box}
-
-        body, html {
-            height: 100%;
-            margin: 0;
-            font-family: Arial;
-        }
-
-        .tablink {
-            background-color: #e7d0ec;
-            color: black;
-            float: left;
-            border: none;
-            outline: none;
-            cursor: pointer;
-            padding: 14px 16px;
-            font-size: 17px;
-            width: 50%;
-        }
-
-        .chart_data {
-            margin-bottom: 40px;
-        }
-
-        .chart {
-            height: 450px;
-            width: 100%;
-            background-color: rgb(239, 249, 234);
-        }
-
-        #table_container {
-            display: none;
-        }
-    </style>
 </head>
 
 <body>
@@ -71,7 +36,7 @@
             </select>
         </div>
 
-        <button type="button" id="loadTable{{ forloop.counter0 }}" class="tablink" onclick="toggle_chart_table({{ forloop.counter0 }})">Table</button><br><br> <!-- table button -->
+        <button type="button" id="loadTable{{ forloop.counter0 }}" class="tablink" onclick="toggle_chart_table({{ forloop.counter0 }})" style="background-color: rgb(149, 225, 150);" >Table</button><br><br> <!-- table button -->
 
         <div class="chart" id="chart{{ forloop.counter0 }}" style="display: block;"></div>              <!-- chart canvas -->
 
@@ -80,7 +45,6 @@
     </div>
 
     <script>
-
 
         function toggle_chart_table(index) {
 
@@ -99,18 +63,15 @@
             }
         }
 
-
-
-
         $(document).ready(function() {
             $("#loadTable{{ forloop.counter0 }}").click(function(e) {
-                e.preventDefault(); 
+                e.preventDefault();
 
                 $.ajax({
                     type: "GET",  
                     url: "/plot_table{{ forloop.counter0 }}/",
                     success: function(response) {
-                          
+                        
                     if(response.status === "ok" && response.data.length > 0) {
 
                         var tableHtml = "<table><thead><tr>";
@@ -138,23 +99,25 @@
                         error: function() {
 
                             alert(" request failed. Please try again later.");
+
                         }
                     });
                 });
             });
 
-
-
         window.onload = function () {
+
             {% for plot_key, plot_value in content.plot_data.items %}
+
                 update_plot_type({{ forloop.counter0 }});
+
             {% endfor %}
         }
 
-
-
         function update_plot_type(plot_index) {
+
             {% for plot_key, plot_value in content.plot_data.items %}
+
             if ({{ forloop.counter0}} === plot_index) {
                 (function () {
                     var select_plot_type = document.getElementById('plot_type_' + plot_index).value;
@@ -219,7 +182,6 @@
             }
             {% endfor %}
         }
-
 
     </script>
 
